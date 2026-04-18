@@ -4,7 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Conjugaison Maîtresse</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Conjugaison">
+<meta name="theme-color" content="#f5f3ef">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -124,11 +130,51 @@ body{background:var(--bg);color:var(--cream);font-family:'EB Garamond',Georgia,s
 .notif-toggle{background:none;border:1px solid var(--border);border-radius:6px;padding:5px 12px;font-family:'EB Garamond',serif;font-size:.82rem;color:var(--cream-dim);cursor:pointer;transition:all .2s}
 .notif-toggle.on{background:var(--green);border-color:var(--green);color:#fff}
 .notif-toggle:hover{border-color:var(--gold-dim)}
+/* Auth screen */
+.auth-overlay{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200;gap:20px;padding:32px}
+.auth-logo{font-size:3rem;margin-bottom:4px}
+.auth-title{font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:700;color:var(--gold);text-align:center}
+.auth-sub{font-style:italic;color:var(--cream-dim);font-size:.9rem;text-align:center;margin-top:-8px}
+.auth-divider{height:1px;background:linear-gradient(90deg,transparent,var(--gold-dim),transparent);width:100%;max-width:320px}
+.auth-desc{font-size:.85rem;color:var(--cream-dim);text-align:center;max-width:300px;line-height:1.5}
+.google-btn{display:flex;align-items:center;gap:12px;background:#ffffff;border:1.5px solid var(--border);border-radius:10px;padding:13px 24px;cursor:pointer;font-family:'EB Garamond',serif;font-size:1rem;color:var(--cream);box-shadow:0 2px 8px rgba(0,0,0,.08);transition:all .2s;max-width:300px;width:100%;justify-content:center}
+.google-btn:hover{box-shadow:0 4px 14px rgba(0,0,0,.12);transform:translateY(-1px)}
+.google-btn svg{flex-shrink:0}
+.auth-note{font-size:.72rem;color:var(--cream-dim);text-align:center;font-style:italic;max-width:280px}
+/* User bar */
+.user-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.user-info{display:flex;align-items:center;gap:9px}
+.user-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;border:1px solid var(--border)}
+.user-avatar-fallback{width:28px;height:28px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;color:var(--gold);font-family:'Playfair Display',serif}
+.user-name{font-size:.82rem;color:var(--cream)}
+.user-right{display:flex;align-items:center;gap:10px}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--cream-dim);flex-shrink:0}
+.sync-dot.synced{background:var(--green)}
+.sync-dot.syncing{background:var(--gold-dim);animation:blink 1s infinite}
+.sync-dot.error{background:var(--red)}
+.sync-label{font-size:.72rem;color:var(--cream-dim);font-style:italic}
+.signout-btn{background:none;border:none;cursor:pointer;font-family:'EB Garamond',serif;font-size:.78rem;color:var(--cream-dim);padding:0;transition:color .2s}
+.signout-btn:hover{color:var(--red)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .anim{animation:fadeUp .25s ease forwards}
 </style>
 </head>
 <body>
+<!-- AUTH SCREEN -->
+<div class="auth-overlay" id="auth-overlay">
+  <div class="auth-logo">🇫🇷</div>
+  <div class="auth-title">Conjugaison Maîtresse</div>
+  <div class="auth-sub">300 verbes · 30 semaines · 9 temps</div>
+  <div class="auth-divider"></div>
+  <div class="auth-desc">Connectez-vous pour synchroniser votre progression sur tous vos appareils.</div>
+  <button class="google-btn" onclick="signInWithGoogle()">
+    <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/><path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.825.957 4.039l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"/></svg>
+    Continuer avec Google
+  </button>
+  <div class="auth-note">Votre progression est sauvegardée dans votre compte Google et synchronisée automatiquement.</div>
+</div>
+
 <div class="wrap">
   <div class="app-header" style="text-align:center;margin-bottom:22px">
     <div class="gold-rule"></div>
@@ -153,6 +199,21 @@ body{background:var(--bg);color:var(--cream);font-family:'EB Garamond',Georgia,s
     </div>
     <div class="prog-summary" id="prog-summary"></div>
     <div id="advance-area"></div>
+
+    <!-- User bar with sync status -->
+    <div class="user-bar" id="user-bar">
+      <div class="user-info" id="user-info-area">
+        <div class="user-avatar-fallback" id="user-avatar">?</div>
+        <span class="user-name" id="user-name">—</span>
+      </div>
+      <div class="user-right">
+        <div class="sync-dot syncing" id="sync-dot"></div>
+        <span class="sync-label" id="sync-label">En attente…</span>
+        <button class="signout-btn" onclick="signOut()">Déconnexion</button>
+      </div>
+    </div>
+
+    <!-- Daily reminder -->
     <div class="reminder-panel">
       <div class="reminder-row">
         <div class="reminder-label">Rappel quotidien</div>
@@ -162,6 +223,7 @@ body{background:var(--bg);color:var(--cream);font-family:'EB Garamond',Georgia,s
         </div>
       </div>
     </div>
+
     <div class="section-lbl">temps à maîtriser</div>
     <div class="tense-grid" id="tense-grid"></div>
   </div>
@@ -496,14 +558,6 @@ function freshProgress(){
   return p;
 }
 let STATE={weekIndex:0,tenseProgress:freshProgress(),lastFridayAdvance:null};
-
-function loadState(){
-  try{
-    const s=localStorage.getItem('cmv2');
-    if(s){STATE=JSON.parse(s); if(!STATE.tenseProgress) STATE.tenseProgress=freshProgress();}
-  }catch(e){}
-}
-function saveState(){try{localStorage.setItem('cmv2',JSON.stringify(STATE));}catch(e){}}
 
 function currentVerbs(){return WEEK_GROUPS[STATE.weekIndex];}
 function allTensesMastered(){return TENSES.every(t=>(STATE.tenseProgress[t.id]?.bestScore||0)>=90);}
@@ -895,6 +949,160 @@ function dismissBanner(){
 // ══════════════════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
+// FIREBASE SETUP
+// ══════════════════════════════════════════════════════════
+/*
+  ┌─────────────────────────────────────────────────────┐
+  │  SETUP INSTRUCTIONS (one-time, ~10 minutes)         │
+  │                                                     │
+  │  1. Go to https://console.firebase.google.com       │
+  │  2. Create project → name it "conjugaison-maitresse"│
+  │  3. Build → Authentication → Sign-in method         │
+  │     → Enable "Google"                               │
+  │  4. Build → Firestore Database → Create database    │
+  │     → Start in production mode → choose region     │
+  │  5. Firestore → Rules → paste these rules:          │
+  │                                                     │
+  │     rules_version = '2';                            │
+  │     service cloud.firestore.v1 {                    │
+  │       match /databases/{database}/documents {       │
+  │         match /users/{uid}/progress {               │
+  │           allow read, write: if                     │
+  │             request.auth != null &&                 │
+  │             request.auth.uid == uid;                │
+  │         }                                           │
+  │       }                                             │
+  │     }                                               │
+  │                                                     │
+  │  6. Project Settings → Add web app → copy config   │
+  │     → paste into FIREBASE_CONFIG below              │
+  │  7. Authentication → Settings → Authorized domains  │
+  │     → Add your hosting domain (or localhost)        │
+  │                                                     │
+  │  HOSTING (GitHub Pages):                            │
+  │  1. github.com → New repo → "conjugaison-maitresse"│
+  │  2. Upload this file as index.html                  │
+  │  3. Settings → Pages → Deploy from main branch     │
+  │  4. Add yourname.github.io to Firebase auth domains│
+  └─────────────────────────────────────────────────────┘
+*/
+
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyDDO1n6QW64Pb1cGiDIEeLEp-B1oR_mNCg",
+  authDomain:        "conjugaison-maitresse.firebaseapp.com",
+  projectId:         "conjugaison-maitresse",
+  storageBucket:     "conjugaison-maitresse.firebasestorage.app",
+  messagingSenderId: "1069718434669",
+  appId:             "1:1069718434669:web:1520316f1fb50d95aa2064",
+  measurementId:     "G-PX6EHVY1XT"
+};
+
+const IS_CONFIGURED = FIREBASE_CONFIG.apiKey !== "YOUR_API_KEY";
+
+let db=null, auth=null, currentUser=null, saveDebounce=null;
+
+function initFirebase(){
+  if(!IS_CONFIGURED) return;
+  firebase.initializeApp(FIREBASE_CONFIG);
+  db   = firebase.firestore();
+  auth = firebase.auth();
+
+  auth.onAuthStateChanged(user=>{
+    if(user){
+      currentUser=user;
+      updateUserBar(user);
+      loadFromFirestore();
+    } else {
+      currentUser=null;
+      document.getElementById('auth-overlay').style.display='flex';
+    }
+  });
+}
+
+function signInWithGoogle(){
+  if(!IS_CONFIGURED){
+    alert('Veuillez d\'abord configurer Firebase (voir les instructions dans le code).');
+    return;
+  }
+  const provider=new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(err=>{
+    console.error('Sign-in error:',err);
+    alert('Erreur de connexion : '+err.message);
+  });
+}
+
+function signOut(){
+  if(!auth) return;
+  auth.signOut().then(()=>{
+    currentUser=null;
+    STATE={weekIndex:0,tenseProgress:freshProgress(),lastFridayAdvance:null};
+    document.getElementById('auth-overlay').style.display='flex';
+  });
+}
+
+function updateUserBar(user){
+  document.getElementById('auth-overlay').style.display='none';
+  const nameEl=document.getElementById('user-name');
+  const avatarEl=document.getElementById('user-avatar');
+  if(user.displayName) nameEl.textContent=user.displayName.split(' ')[0];
+  if(user.photoURL){
+    avatarEl.outerHTML=`<img class="user-avatar" id="user-avatar" src="${user.photoURL}" referrerpolicy="no-referrer"/>`;
+  } else {
+    avatarEl.textContent=(user.displayName||user.email||'?')[0].toUpperCase();
+  }
+}
+
+function setSyncStatus(status,msg){
+  const dot=document.getElementById('sync-dot');
+  const lbl=document.getElementById('sync-label');
+  if(!dot||!lbl) return;
+  dot.className='sync-dot '+status;
+  lbl.textContent=msg;
+}
+
+async function loadFromFirestore(){
+  if(!db||!currentUser) return;
+  setSyncStatus('syncing','Chargement…');
+  try{
+    const doc=await db.collection('users').doc(currentUser.uid).collection('progress').doc('state').get();
+    if(doc.exists){
+      const data=doc.data();
+      if(data&&data.tenseProgress){
+        STATE=data;
+        try{localStorage.setItem('cmv2',JSON.stringify(STATE));}catch(e){}
+      }
+    }
+    setSyncStatus('synced','Synchronisé ✓');
+  }catch(e){
+    console.error('Firestore load error:',e);
+    setSyncStatus('error','Hors ligne');
+  }
+  renderHome();
+  if(STATE.notifEnabled&&Notification.permission==='granted') scheduleNotificationCheck();
+}
+
+function saveState(){
+  // Immediate local save
+  try{localStorage.setItem('cmv2',JSON.stringify(STATE));}catch(e){}
+  // Debounced Firestore save
+  if(!db||!currentUser) return;
+  setSyncStatus('syncing','Sauvegarde…');
+  clearTimeout(saveDebounce);
+  saveDebounce=setTimeout(async()=>{
+    try{
+      await db.collection('users').doc(currentUser.uid).collection('progress').doc('state').set(STATE);
+      setSyncStatus('synced','Synchronisé ✓ '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
+    }catch(e){
+      console.error('Firestore save error:',e);
+      setSyncStatus('error','Sauvegardé localement');
+    }
+  },1500);
+}
+
+// ══════════════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════════════
 function show(id){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById('screen-'+id).classList.add('active');}
 function goHome(){clearInterval(S.timer||0);renderHome();show('home');}
 
@@ -903,9 +1111,24 @@ document.getElementById('ans-input').addEventListener('keydown',e=>{if(e.key==='
 // ══════════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════════
-loadState();
-renderHome();
-if(STATE.notifEnabled&&Notification.permission==='granted') scheduleNotificationCheck();
+// Load local state immediately for fast first render
+try{
+  const s=localStorage.getItem('cmv2');
+  if(s){STATE=JSON.parse(s); if(!STATE.tenseProgress) STATE.tenseProgress=freshProgress();}
+}catch(e){}
+
+if(IS_CONFIGURED){
+  // Firebase configured — auth flow handles rendering
+  document.getElementById('auth-overlay').style.display='flex';
+  initFirebase();
+} else {
+  // Not yet configured — run in local-only mode
+  document.getElementById('auth-overlay').style.display='none';
+  document.getElementById('user-bar').style.display='none';
+  renderHome();
+  if(STATE.notifEnabled&&Notification.permission==='granted') scheduleNotificationCheck();
+  setSyncStatus('error','Mode local — Firebase non configuré');
+}
 </script>
 </body>
 </html>
