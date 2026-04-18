@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conjugaison Maîtresse</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f3ef;--surface:#ffffff;--surface2:#f0ede8;--surface3:#e8e4dc;
+  --gold:#8a6820;--gold-dim:#b8922e;--gold-bright:#5e4510;
+  --cream:#2c2416;--cream-dim:#7a6e5a;
+  --green:#2d7a52;--red:#b54a4a;--orange:#9a5c20;
+  --border:#ddd8ce;
+}
+body{background:var(--bg);color:var(--cream);font-family:'EB Garamond',Georgia,serif;min-height:100vh}
+.wrap{max-width:700px;margin:0 auto;padding:28px 18px 70px}
+.screen{display:none}.screen.active{display:block}
+.gold-rule{height:1px;background:linear-gradient(90deg,transparent,var(--gold-dim),transparent);margin:14px 0}
+.app-title{font-family:'Playfair Display',serif;font-size:1.9rem;font-weight:700;color:var(--gold);text-align:center;margin-bottom:3px}
+.app-sub{font-style:italic;color:var(--cream-dim);font-size:.9rem;text-align:center}
+/* Week bar */
+.week-bar{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 1px 6px rgba(0,0,0,.05)}
+.week-info h2{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--gold);margin-bottom:2px}
+.week-info p{font-size:.8rem;color:var(--cream-dim)}
+.friday-badge{text-align:right;font-size:.78rem;font-style:italic}
+.friday-badge.ready{color:var(--green)}.friday-badge.wait{color:var(--cream-dim)}.friday-badge.today{color:var(--gold)}
+/* Verb list */
+.verb-list{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:18px}
+.verb-list-title{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--cream-dim);margin-bottom:10px}
+.verb-chips{display:flex;flex-wrap:wrap;gap:6px}
+.verb-chip{background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:3px 11px;font-size:.85rem;color:var(--cream)}
+/* Tense grid */
+.section-lbl{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--cream-dim);margin:18px 0 10px;display:flex;align-items:center;gap:10px}
+.section-lbl::before,.section-lbl::after{content:'';flex:1;height:1px;background:var(--border)}
+.tense-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:18px}
+.t-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:13px 12px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.t-card:hover:not(.locked){border-color:var(--gold-dim);transform:translateY(-2px)}
+.t-card.locked{opacity:.5;cursor:not-allowed}
+.t-card.mastered{border-color:var(--green)}
+.t-card.mastered::after{content:'✓';position:absolute;top:6px;right:8px;color:var(--green);font-size:.7rem;font-style:italic}
+.t-name{font-family:'Playfair Display',serif;font-size:.82rem;font-weight:700;margin-bottom:5px;color:var(--cream)}
+.t-score{font-size:.75rem;color:var(--cream-dim);margin-bottom:7px}
+.t-bar{height:2px;background:var(--border);border-radius:1px}
+.t-fill{height:100%;border-radius:1px;background:linear-gradient(90deg,var(--gold-dim),var(--gold));transition:width .5s}
+.t-fill.green{background:linear-gradient(90deg,#4a9065,var(--green))}
+.lock-icon{position:absolute;top:8px;right:8px;font-size:.75rem;color:var(--cream-dim)}
+/* Progress summary */
+.prog-summary{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:18px;display:flex;gap:16px;justify-content:space-around;text-align:center}
+.prog-stat .val{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:var(--gold)}
+.prog-stat .lbl{font-size:.72rem;color:var(--cream-dim)}
+/* Advance btn */
+.advance-btn{width:100%;background:var(--green);color:#ffffff;border:none;border-radius:8px;padding:14px;font-family:'Playfair Display',serif;font-size:.95rem;font-weight:700;cursor:pointer;letter-spacing:.05em;margin-bottom:10px;transition:all .2s}
+.advance-btn:hover{opacity:.9}
+/* Drill */
+.drill-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.back-btn{background:none;border:none;color:var(--cream-dim);cursor:pointer;font-family:'EB Garamond',serif;font-size:.95rem}
+.back-btn:hover{color:var(--cream)}
+.tense-pill{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 14px;font-size:.78rem;color:var(--gold);font-style:italic}
+.q-count{font-size:.8rem;color:var(--cream-dim)}
+.prog-track{height:3px;background:var(--border);border-radius:2px;margin-bottom:18px}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold));border-radius:2px;transition:width .4s}
+.live-score{text-align:center;font-size:.85rem;color:var(--cream-dim);margin-bottom:16px;min-height:20px}
+.live-score b{color:var(--gold);font-family:'Playfair Display',serif}
+/* Card */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:40px 36px 32px;position:relative;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.timer-bar{position:absolute;top:0;left:0;height:3px;background:var(--gold);border-radius:0 2px 0 0;transition:width .08s linear,background .3s}
+.timer-bar.slow{background:var(--orange)}.timer-bar.urgent{background:var(--red)}
+.prompt-verb{font-family:'Playfair Display',serif;font-size:2.6rem;font-weight:700;font-style:italic;text-align:center;margin-bottom:6px;color:var(--cream)}
+.prompt-pron{font-size:1.3rem;color:var(--gold);text-align:center;margin-bottom:28px;letter-spacing:.06em}
+.ans-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px 18px;color:var(--cream);font-family:'EB Garamond',serif;font-size:1.2rem;text-align:center;outline:none;transition:border-color .2s,background .2s;letter-spacing:.02em}
+.ans-input::placeholder{color:var(--cream-dim);font-style:italic;font-size:.95rem}
+.ans-input:focus{border-color:var(--gold-dim)}
+.ans-input.correct{border-color:var(--green);background:rgba(109,184,138,.07)}
+.ans-input.wrong{border-color:var(--red);background:rgba(208,112,112,.07)}
+.submit-btn{width:100%;margin-top:11px;background:var(--gold);color:#ffffff;border:none;border-radius:8px;padding:13px;font-family:'Playfair Display',serif;font-size:.95rem;font-weight:700;cursor:pointer;letter-spacing:.04em;transition:all .2s}
+.submit-btn:hover{background:var(--gold-bright)}.submit-btn:active{transform:scale(.98)}
+.submit-btn:disabled{background:var(--surface2);color:var(--cream-dim);cursor:default;border:1px solid var(--border)}.feedback{text-align:center;margin-top:13px;min-height:26px;font-size:1rem}
+.badge{display:inline-block;padding:2px 9px;border-radius:10px;font-size:.7rem;font-style:italic;margin-left:7px}
+.b-auto{background:rgba(109,184,138,.15);color:var(--green)}
+.b-good{background:rgba(201,168,76,.15);color:var(--gold)}
+.b-slow{background:rgba(192,133,85,.15);color:var(--orange)}
+.hint-row{text-align:center;margin-top:10px}
+.hint-btn{background:none;border:none;color:var(--cream-dim);font-family:'EB Garamond',serif;font-size:.8rem;cursor:pointer;border-bottom:1px dotted var(--cream-dim);font-style:italic}
+/* Results */
+.res-wrap{text-align:center;padding:8px 0}
+.res-grade{font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;margin-bottom:3px}
+.res-sub{color:var(--cream-dim);font-style:italic;margin-bottom:28px}
+.res-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:24px}
+.res-stat{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px 10px}
+.res-val{font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:700;color:var(--gold)}
+.res-lbl{font-size:.72rem;color:var(--cream-dim);margin-top:3px}
+.unlock-banner{background:rgba(109,184,138,.12);border:1px solid var(--green);border-radius:8px;padding:14px;margin-bottom:20px;color:var(--green);font-style:italic}
+.err-box{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:left;margin-bottom:24px}
+.err-box h3{font-family:'Playfair Display',serif;color:var(--red);margin-bottom:12px;font-size:.9rem}
+.err-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:.85rem;gap:10px}
+.err-item:last-child{border-bottom:none}
+.err-prompt{color:var(--cream-dim);flex:1;font-size:.8rem}
+.err-wrong{color:var(--red);text-decoration:line-through;font-style:italic;margin-right:6px}
+.err-correct{color:var(--green)}
+.no-err{color:var(--green);text-align:center;padding:16px;font-style:italic}
+.btn-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.btn-p{background:var(--gold);color:#ffffff;border:none;border-radius:8px;padding:12px 28px;font-family:'Playfair Display',serif;font-size:.9rem;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.04em}
+.btn-p:hover{background:var(--gold-bright);color:#ffffff;transform:translateY(-2px)}
+.btn-s{background:transparent;color:var(--cream-dim);border:1px solid var(--border);border-radius:8px;padding:12px 22px;font-family:'EB Garamond',serif;font-size:.9rem;cursor:pointer;transition:all .2s}
+.btn-s:hover{border-color:var(--cream-dim);color:var(--cream)}
+/* Notification banner */
+.notif-banner{background:#fffbf0;border:1px solid #d4a843;border-left:4px solid var(--gold-dim);border-radius:8px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:flex-start;gap:12px}
+.notif-banner.green{background:#f0faf5;border-color:#5aab7a;border-left-color:var(--green)}
+.notif-icon{font-size:1.1rem;flex-shrink:0;margin-top:1px}
+.notif-body{flex:1}
+.notif-title{font-family:'Playfair Display',serif;font-size:.9rem;font-weight:700;color:var(--cream);margin-bottom:3px}
+.notif-text{font-size:.8rem;color:var(--cream-dim);line-height:1.4}
+.notif-tenses{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.notif-tense-pill{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:2px 10px;font-size:.75rem;color:var(--gold);font-style:italic}
+/* Reminder settings */
+.reminder-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:18px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.reminder-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.reminder-label{font-size:.82rem;color:var(--cream-dim)}
+.reminder-controls{display:flex;align-items:center;gap:8px}
+.time-input{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-family:'EB Garamond',serif;font-size:.9rem;color:var(--cream);outline:none;cursor:pointer}
+.time-input:focus{border-color:var(--gold-dim)}
+.notif-toggle{background:none;border:1px solid var(--border);border-radius:6px;padding:5px 12px;font-family:'EB Garamond',serif;font-size:.82rem;color:var(--cream-dim);cursor:pointer;transition:all .2s}
+.notif-toggle.on{background:var(--green);border-color:var(--green);color:#fff}
+.notif-toggle:hover{border-color:var(--gold-dim)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.anim{animation:fadeUp .25s ease forwards}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-header" style="text-align:center;margin-bottom:22px">
+    <div class="gold-rule"></div>
+    <div class="app-title">Conjugaison Maîtresse</div>
+    <div class="app-sub">300 verbes · 30 semaines · 9 temps</div>
+    <div class="gold-rule" style="margin-top:12px;margin-bottom:0"></div>
+  </div>
+
+  <!-- HOME -->
+  <div class="screen active" id="screen-home">
+    <div id="notif-banner-area"></div>
+    <div class="week-bar">
+      <div class="week-info">
+        <h2 id="home-week-title">Semaine 1 / 30</h2>
+        <p id="home-week-sub">Complétez tous les temps pour avancer</p>
+      </div>
+      <div class="friday-badge" id="friday-badge"></div>
+    </div>
+    <div class="verb-list">
+      <div class="verb-list-title">Verbes de cette semaine</div>
+      <div class="verb-chips" id="verb-chips"></div>
+    </div>
+    <div class="prog-summary" id="prog-summary"></div>
+    <div id="advance-area"></div>
+    <div class="reminder-panel">
+      <div class="reminder-row">
+        <div class="reminder-label">Rappel quotidien</div>
+        <div class="reminder-controls">
+          <input class="time-input" type="time" id="reminder-time" value="19:00" onchange="saveReminderTime(this.value)"/>
+          <button class="notif-toggle" id="notif-toggle-btn" onclick="toggleNotifications()">Activer</button>
+        </div>
+      </div>
+    </div>
+    <div class="section-lbl">temps à maîtriser</div>
+    <div class="tense-grid" id="tense-grid"></div>
+  </div>
+
+  <!-- DRILL -->
+  <div class="screen" id="screen-drill">
+    <div class="drill-top">
+      <button class="back-btn" onclick="goHome()">← Retour</button>
+      <div class="tense-pill" id="drill-pill"></div>
+      <div class="q-count" id="drill-count"></div>
+    </div>
+    <div class="prog-track"><div class="prog-fill" id="drill-prog" style="width:0%"></div></div>
+    <div class="live-score" id="drill-score"></div>
+    <div class="card anim" id="drill-card">
+      <div class="timer-bar" id="timer-bar"></div>
+      <div class="prompt-verb" id="prompt-verb"></div>
+      <div class="prompt-pron" id="prompt-pron"></div>
+      <input class="ans-input" id="ans-input" type="text" placeholder="conjuguez ici…"
+        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <button class="submit-btn" id="submit-btn" onclick="submit()">Confirmer →</button>
+      <div class="feedback" id="feedback"></div>
+      <div class="hint-row"><button class="hint-btn" id="hint-btn" onclick="showHint()">Indice</button></div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="screen" id="screen-results">
+    <div class="res-wrap" id="res-wrap"></div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════════════════════════
+const PRONOUNS=['je','tu','il/elle','nous','vous','ils/elles'];
+const TENSES=[
+  {id:'présent',label:'Présent'},
+  {id:'imparfait',label:'Imparfait'},
+  {id:'passé composé',label:'Passé Composé'},
+  {id:'futur simple',label:'Futur Simple'},
+  {id:'conditionnel présent',label:'Conditionnel'},
+  {id:'subjonctif présent',label:'Subjonctif Présent'},
+  {id:'plus-que-parfait',label:'Plus-que-parfait'},
+  {id:'conditionnel passé',label:'Conditionnel Passé'},
+  {id:'subjonctif passé',label:'Subjonctif Passé'},
+];
+
+const WEEK_GROUPS=[
+['être','avoir','aller','faire','venir','pouvoir','vouloir','savoir','devoir','partir'],
+['mettre','prendre','voir','dire','tenir','boire','connaître','lire','écrire','parler'],
+['finir','répondre','attendre','entendre','rendre','vendre','perdre','comprendre','apprendre','descendre'],
+['ouvrir','offrir','dormir','servir','sortir','courir','mourir','sentir','mentir','suivre'],
+['croire','vivre','recevoir','conduire','construire','naître','rire','plaire','craindre','peindre'],
+['joindre','battre','vaincre','résoudre','apercevoir','réduire','traduire','produire','valoir','acquérir'],
+['travailler','aimer','chercher','trouver','donner','montrer','demander','regarder','écouter','aider'],
+['arriver','entrer','rester','passer','laisser','penser','porter','gagner','jouer','habiter'],
+['appeler','jeter','acheter','préférer','espérer','payer','envoyer','nettoyer','employer','commencer'],
+['manger','voyager','partager','changer','bouger','réussir','choisir','saisir','remplir','établir'],
+['fournir','définir','agir','réagir','obéir','punir','bâtir','grandir','maigrir','grossir'],
+['rougir','pâlir','vieillir','rajeunir','blanchir','noircir','élargir','approfondir','réfléchir','nourrir'],
+['répéter','protéger','gérer','révéler','lever','mener','amener','peser','achever','geler'],
+['promener','enlever','élever','relever','emmener','ramener','semer','céder','accélérer','créer'],
+['visiter','préparer','cuisiner','réserver','expliquer','utiliser','former','accepter','refuser','décider'],
+['continuer','développer','améliorer','rencontrer','présenter','discuter','informer','organiser','calculer','compter'],
+['chanter','danser','marcher','nager','sauter','couper','laver','frotter','rincer','sécher'],
+['brûler','allumer','éteindre','fermer','verrouiller','sonner','frapper','pousser','tirer','tourner'],
+['monter','tomber','rouler','voler','viser','attraper','lancer','taper','glisser','grimper'],
+['plonger','ramper','bondir','foncer','surgir','paraître','apparaître','disparaître','reconnaître','confondre'],
+['permettre','interdire','autoriser','obliger','forcer','encourager','décourager','conseiller','empêcher','persuader'],
+['promettre','menacer','avertir','rappeler','oublier','ignorer','remarquer','noter','vérifier','confirmer'],
+['comparer','analyser','examiner','étudier','rechercher','découvrir','inventer','concevoir','réaliser','tester'],
+['évaluer','mesurer','estimer','juger','prouver','démontrer','illustrer','résumer','décrire','raconter'],
+['soigner','guérir','blesser','sauver','défendre','attaquer','fuir','résister','supporter','subir'],
+['adorer','détester','apprécier','respecter','admirer','envier','trahir','abandonner','retrouver','réconcilier'],
+['embaucher','licencier','diriger','superviser','déléguer','planifier','investir','négocier','conclure','signer'],
+['sculpter','dessiner','photographier','filmer','enregistrer','diffuser','publier','imprimer','numériser','coder'],
+['télécharger','installer','configurer','connecter','déconnecter','sauvegarder','supprimer','copier','coller','afficher'],
+['recycler','trier','polluer','économiser','gaspiller','préserver','conserver','cultiver','récolter','planter'],
+];
+
+// ══════════════════════════════════════════════════════════
+// VERB DATA
+// Format: {pres,pp,fut,[subj],[aux],[imparfaitStem]} for irregulars
+//         {type:'er'|'ir'|'re'|'ir2'|'er_ger'|'er_cer'|'er_eler'|'er_eter'|'er_è'|'er_é'|'er_é_ger'|'er_yer',[aux]} for regulars
+//         {derivedFrom,stripPrefix,addPrefix,[aux]} for derived
+// ══════════════════════════════════════════════════════════
+const VD={
+// W1
+'être':{pres:['suis','es','est','sommes','êtes','sont'],pp:'été',fut:'ser',subj:['sois','sois','soit','soyons','soyez','soient'],imparfaitStem:'ét'},
+'avoir':{pres:['ai','as','a','avons','avez','ont'],pp:'eu',fut:'aur',subj:['aie','aies','ait','ayons','ayez','aient']},
+'aller':{pres:['vais','vas','va','allons','allez','vont'],pp:'allé',fut:'ir',aux:'être',subj:['aille','ailles','aille','allions','alliez','aillent']},
+'faire':{pres:['fais','fais','fait','faisons','faites','font'],pp:'fait',fut:'fer',subj:['fasse','fasses','fasse','fassions','fassiez','fassent']},
+'venir':{pres:['viens','viens','vient','venons','venez','viennent'],pp:'venu',fut:'viendr',aux:'être',subj:['vienne','viennes','vienne','venions','veniez','viennent']},
+'pouvoir':{pres:['peux','peux','peut','pouvons','pouvez','peuvent'],pp:'pu',fut:'pourr',subj:['puisse','puisses','puisse','puissions','puissiez','puissent']},
+'vouloir':{pres:['veux','veux','veut','voulons','voulez','veulent'],pp:'voulu',fut:'voudr',subj:['veuille','veuilles','veuille','voulions','vouliez','veuillent']},
+'savoir':{pres:['sais','sais','sait','savons','savez','savent'],pp:'su',fut:'saur',subj:['sache','saches','sache','sachions','sachiez','sachent']},
+'devoir':{pres:['dois','dois','doit','devons','devez','doivent'],pp:'dû',fut:'devr',subj:['doive','doives','doive','devions','deviez','doivent']},
+'partir':{type:'ir2',aux:'être'},
+// W2
+'mettre':{pres:['mets','mets','met','mettons','mettez','mettent'],pp:'mis',fut:'mettr'},
+'prendre':{pres:['prends','prends','prend','prenons','prenez','prennent'],pp:'pris',fut:'prendr',subj:['prenne','prennes','prenne','prenions','preniez','prennent']},
+'voir':{pres:['vois','vois','voit','voyons','voyez','voient'],pp:'vu',fut:'verr',subj:['voie','voies','voie','voyions','voyiez','voient']},
+'dire':{pres:['dis','dis','dit','disons','dites','disent'],pp:'dit',fut:'dir'},
+'tenir':{pres:['tiens','tiens','tient','tenons','tenez','tiennent'],pp:'tenu',fut:'tiendr',subj:['tienne','tiennes','tienne','tenions','teniez','tiennent']},
+'boire':{pres:['bois','bois','boit','buvons','buvez','boivent'],pp:'bu',fut:'boir',subj:['boive','boives','boive','buvions','buviez','boivent']},
+'connaître':{pres:['connais','connais','connaît','connaissons','connaissez','connaissent'],pp:'connu',fut:'connaîtr'},
+'lire':{pres:['lis','lis','lit','lisons','lisez','lisent'],pp:'lu',fut:'lir'},
+'écrire':{pres:['écris','écris','écrit','écrivons','écrivez','écrivent'],pp:'écrit',fut:'écrir'},
+'parler':{type:'er'},
+// W3
+'finir':{type:'ir'},'répondre':{type:'re'},'attendre':{type:'re'},'entendre':{type:'re'},
+'rendre':{type:'re'},'vendre':{type:'re'},'perdre':{type:'re'},
+'comprendre':{derivedFrom:'prendre',stripPrefix:'pr',addPrefix:'compr'},
+'apprendre':{derivedFrom:'prendre',stripPrefix:'pr',addPrefix:'appr'},
+'descendre':{type:'re',aux:'être'},
+// W4
+'ouvrir':{pres:['ouvre','ouvres','ouvre','ouvrons','ouvrez','ouvrent'],pp:'ouvert',fut:'ouvrir'},
+'offrir':{pres:['offre','offres','offre','offrons','offrez','offrent'],pp:'offert',fut:'offrir'},
+'dormir':{type:'ir2'},'servir':{type:'ir2'},'sortir':{type:'ir2',aux:'être'},
+'courir':{pres:['cours','cours','court','courons','courez','courent'],pp:'couru',fut:'courr'},
+'mourir':{pres:['meurs','meurs','meurt','mourons','mourez','meurent'],pp:'mort',fut:'mourr',aux:'être',subj:['meure','meures','meure','mourions','mouriez','meurent']},
+'sentir':{type:'ir2'},'mentir':{type:'ir2'},
+'suivre':{pres:['suis','suis','suit','suivons','suivez','suivent'],pp:'suivi',fut:'suivr'},
+// W5
+'croire':{pres:['crois','crois','croit','croyons','croyez','croient'],pp:'cru',fut:'croir',subj:['croie','croies','croie','croyions','croyiez','croient']},
+'vivre':{pres:['vis','vis','vit','vivons','vivez','vivent'],pp:'vécu',fut:'vivr'},
+'recevoir':{pres:['reçois','reçois','reçoit','recevons','recevez','reçoivent'],pp:'reçu',fut:'recevr',subj:['reçoive','reçoives','reçoive','recevions','receviez','reçoivent']},
+'conduire':{pres:['conduis','conduis','conduit','conduisons','conduisez','conduisent'],pp:'conduit',fut:'conduir'},
+'construire':{derivedFrom:'conduire',stripPrefix:'cond',addPrefix:'constr'},
+'naître':{pres:['nais','nais','naît','naissons','naissez','naissent'],pp:'né',fut:'naîtr',aux:'être'},
+'rire':{pres:['ris','ris','rit','rions','riez','rient'],pp:'ri',fut:'rir'},
+'plaire':{pres:['plais','plais','plaît','plaisons','plaisez','plaisent'],pp:'plu',fut:'plair'},
+'craindre':{pres:['crains','crains','craint','craignons','craignez','craignent'],pp:'craint',fut:'craindr',subj:['craigne','craignes','craigne','craignions','craigniez','craignent']},
+'peindre':{pres:['peins','peins','peint','peignons','peignez','peignent'],pp:'peint',fut:'peindr',subj:['peigne','peignes','peigne','peignions','peigniez','peignent']},
+// W6
+'joindre':{pres:['joins','joins','joint','joignons','joignez','joignent'],pp:'joint',fut:'joindr',subj:['joigne','joignes','joigne','joignions','joigniez','joignent']},
+'battre':{pres:['bats','bats','bat','battons','battez','battent'],pp:'battu',fut:'battr'},
+'vaincre':{pres:['vaincs','vaincs','vainc','vainquons','vainquez','vainquent'],pp:'vaincu',fut:'vaincr',subj:['vainque','vainques','vainque','vainquions','vainquiez','vainquent']},
+'résoudre':{pres:['résous','résous','résout','résolvons','résolvez','résolvent'],pp:'résolu',fut:'résoudr',subj:['résolve','résolves','résolve','résolvions','résolviez','résolvent']},
+'apercevoir':{pres:['aperçois','aperçois','aperçoit','apercevons','apercevez','aperçoivent'],pp:'aperçu',fut:'apercevr',subj:['aperçoive','aperçoives','aperçoive','apercevions','aperceviez','aperçoivent']},
+'réduire':{derivedFrom:'conduire',stripPrefix:'cond',addPrefix:'réd'},
+'traduire':{derivedFrom:'conduire',stripPrefix:'cond',addPrefix:'trad'},
+'produire':{derivedFrom:'conduire',stripPrefix:'cond',addPrefix:'prod'},
+'valoir':{pres:['vaux','vaux','vaut','valons','valez','valent'],pp:'valu',fut:'vaudr',subj:['vaille','vailles','vaille','valions','valiez','vaillent']},
+'acquérir':{pres:['acquiers','acquiers','acquiert','acquérons','acquérez','acquièrent'],pp:'acquis',fut:'acquerr',subj:['acquière','acquières','acquière','acquérions','acquériez','acquièrent']},
+// W7-8 regular -er
+'travailler':{type:'er'},'aimer':{type:'er'},'chercher':{type:'er'},'trouver':{type:'er'},'donner':{type:'er'},
+'montrer':{type:'er'},'demander':{type:'er'},'regarder':{type:'er'},'écouter':{type:'er'},'aider':{type:'er'},
+'arriver':{type:'er',aux:'être'},'entrer':{type:'er',aux:'être'},'rester':{type:'er',aux:'être'},
+'passer':{type:'er'},'laisser':{type:'er'},'penser':{type:'er'},'porter':{type:'er'},
+'gagner':{type:'er'},'jouer':{type:'er'},'habiter':{type:'er'},
+// W9
+'appeler':{type:'er_eler'},'jeter':{type:'er_eter'},'acheter':{type:'er_è'},
+'préférer':{type:'er_é'},'espérer':{type:'er_é'},'payer':{type:'er_yer'},
+'envoyer':{pres:['envoie','envoies','envoie','envoyons','envoyez','envoient'],pp:'envoyé',fut:'enverr'},
+'nettoyer':{type:'er_yer'},'employer':{type:'er_yer'},'commencer':{type:'er_cer'},
+// W10
+'manger':{type:'er_ger'},'voyager':{type:'er_ger'},'partager':{type:'er_ger'},
+'changer':{type:'er_ger'},'bouger':{type:'er_ger'},
+'réussir':{type:'ir'},'choisir':{type:'ir'},'saisir':{type:'ir'},'remplir':{type:'ir'},'établir':{type:'ir'},
+// W11
+'fournir':{type:'ir'},'définir':{type:'ir'},'agir':{type:'ir'},'réagir':{type:'ir'},
+'obéir':{type:'ir'},'punir':{type:'ir'},'bâtir':{type:'ir'},'grandir':{type:'ir'},'maigrir':{type:'ir'},'grossir':{type:'ir'},
+// W12
+'rougir':{type:'ir'},'pâlir':{type:'ir'},'vieillir':{type:'ir'},'rajeunir':{type:'ir'},
+'blanchir':{type:'ir'},'noircir':{type:'ir'},'élargir':{type:'ir'},'approfondir':{type:'ir'},'réfléchir':{type:'ir'},'nourrir':{type:'ir'},
+// W13
+'répéter':{type:'er_é'},'protéger':{type:'er_é_ger'},'gérer':{type:'er_é'},'révéler':{type:'er_é'},
+'lever':{type:'er_è'},'mener':{type:'er_è'},'amener':{type:'er_è'},'peser':{type:'er_è'},'achever':{type:'er_è'},'geler':{type:'er_è'},
+// W14
+'promener':{type:'er_è'},'enlever':{type:'er_è'},'élever':{type:'er_è'},'relever':{type:'er_è'},
+'emmener':{type:'er_è'},'ramener':{type:'er_è'},'semer':{type:'er_è'},'céder':{type:'er_é'},'accélérer':{type:'er_é'},'créer':{type:'er'},
+// W15-16 regular -er
+'visiter':{type:'er'},'préparer':{type:'er'},'cuisiner':{type:'er'},'réserver':{type:'er'},
+'expliquer':{type:'er'},'utiliser':{type:'er'},'former':{type:'er'},'accepter':{type:'er'},'refuser':{type:'er'},'décider':{type:'er'},
+'continuer':{type:'er'},'développer':{type:'er'},'améliorer':{type:'er'},'rencontrer':{type:'er'},
+'présenter':{type:'er'},'discuter':{type:'er'},'informer':{type:'er'},'organiser':{type:'er'},'calculer':{type:'er'},'compter':{type:'er'},
+// W17
+'chanter':{type:'er'},'danser':{type:'er'},'marcher':{type:'er'},'nager':{type:'er_ger'},
+'sauter':{type:'er'},'couper':{type:'er'},'laver':{type:'er'},'frotter':{type:'er'},'rincer':{type:'er_cer'},'sécher':{type:'er_é'},
+// W18
+'brûler':{type:'er'},'allumer':{type:'er'},
+'éteindre':{pres:['éteins','éteins','éteint','éteignons','éteignez','éteignent'],pp:'éteint',fut:'éteindr',subj:['éteigne','éteignes','éteigne','éteignions','éteigniez','éteignent']},
+'fermer':{type:'er'},'verrouiller':{type:'er'},'sonner':{type:'er'},'frapper':{type:'er'},'pousser':{type:'er'},'tirer':{type:'er'},'tourner':{type:'er'},
+// W19
+'monter':{type:'er',aux:'être'},'tomber':{type:'er',aux:'être'},'rouler':{type:'er'},'voler':{type:'er'},
+'viser':{type:'er'},'attraper':{type:'er'},'lancer':{type:'er_cer'},'taper':{type:'er'},'glisser':{type:'er'},'grimper':{type:'er'},
+// W20
+'plonger':{type:'er_ger'},'ramper':{type:'er'},'bondir':{type:'ir'},'foncer':{type:'er_cer'},'surgir':{type:'ir'},
+'paraître':{derivedFrom:'connaître',stripPrefix:'conn',addPrefix:'par'},
+'apparaître':{derivedFrom:'connaître',stripPrefix:'conn',addPrefix:'appar'},
+'disparaître':{derivedFrom:'connaître',stripPrefix:'conn',addPrefix:'dispar'},
+'reconnaître':{derivedFrom:'connaître',stripPrefix:'conn',addPrefix:'reconn'},
+'confondre':{type:'re'},
+// W21
+'permettre':{derivedFrom:'mettre',stripPrefix:'m',addPrefix:'perm'},
+'interdire':{pres:['interdis','interdis','interdit','interdisons','interdisez','interdisent'],pp:'interdit',fut:'interdir'},
+'autoriser':{type:'er'},'obliger':{type:'er_ger'},'forcer':{type:'er_cer'},
+'encourager':{type:'er_ger'},'décourager':{type:'er_ger'},'conseiller':{type:'er'},'empêcher':{type:'er'},'persuader':{type:'er'},
+// W22
+'promettre':{derivedFrom:'mettre',stripPrefix:'m',addPrefix:'prom'},
+'menacer':{type:'er_cer'},'avertir':{type:'ir'},'rappeler':{type:'er_eler'},
+'oublier':{type:'er'},'ignorer':{type:'er'},'remarquer':{type:'er'},'noter':{type:'er'},'vérifier':{type:'er'},'confirmer':{type:'er'},
+// W23
+'comparer':{type:'er'},'analyser':{type:'er'},'examiner':{type:'er'},'étudier':{type:'er'},'rechercher':{type:'er'},
+'découvrir':{derivedFrom:'ouvrir',stripPrefix:'ouv',addPrefix:'découv'},
+'inventer':{type:'er'},
+'concevoir':{pres:['conçois','conçois','conçoit','concevons','concevez','conçoivent'],pp:'conçu',fut:'concevr',subj:['conçoive','conçoives','conçoive','concevions','conceviez','conçoivent']},
+'réaliser':{type:'er'},'tester':{type:'er'},
+// W24
+'évaluer':{type:'er'},'mesurer':{type:'er'},'estimer':{type:'er'},'juger':{type:'er_ger'},
+'prouver':{type:'er'},'démontrer':{type:'er'},'illustrer':{type:'er'},'résumer':{type:'er'},
+'décrire':{derivedFrom:'écrire',stripPrefix:'écr',addPrefix:'décr'},
+'raconter':{type:'er'},
+// W25
+'soigner':{type:'er'},'guérir':{type:'ir'},'blesser':{type:'er'},'sauver':{type:'er'},
+'défendre':{type:'re'},'attaquer':{type:'er'},
+'fuir':{pres:['fuis','fuis','fuit','fuyons','fuyez','fuient'],pp:'fui',fut:'fuir'},
+'résister':{type:'er'},'supporter':{type:'er'},'subir':{type:'ir'},
+// W26
+'adorer':{type:'er'},'détester':{type:'er'},'apprécier':{type:'er'},'respecter':{type:'er'},
+'admirer':{type:'er'},'envier':{type:'er'},'trahir':{type:'ir'},'abandonner':{type:'er'},'retrouver':{type:'er'},'réconcilier':{type:'er'},
+// W27
+'embaucher':{type:'er'},'licencier':{type:'er'},'diriger':{type:'er_ger'},'superviser':{type:'er'},
+'déléguer':{type:'er_é'},'planifier':{type:'er'},'investir':{type:'ir'},'négocier':{type:'er'},
+'conclure':{pres:['conclus','conclus','conclut','concluons','concluez','concluent'],pp:'conclu',fut:'conclur'},
+'signer':{type:'er'},
+// W28
+'sculpter':{type:'er'},'dessiner':{type:'er'},'photographier':{type:'er'},'filmer':{type:'er'},
+'enregistrer':{type:'er'},'diffuser':{type:'er'},'publier':{type:'er'},'imprimer':{type:'er'},'numériser':{type:'er'},'coder':{type:'er'},
+// W29
+'télécharger':{type:'er_ger'},'installer':{type:'er'},'configurer':{type:'er'},'connecter':{type:'er'},
+'déconnecter':{type:'er'},'sauvegarder':{type:'er'},'supprimer':{type:'er'},'copier':{type:'er'},'coller':{type:'er'},'afficher':{type:'er'},
+// W30
+'recycler':{type:'er'},'trier':{type:'er'},'polluer':{type:'er'},'économiser':{type:'er'},
+'gaspiller':{type:'er'},'préserver':{type:'er'},'conserver':{type:'er'},'cultiver':{type:'er'},'récolter':{type:'er'},'planter':{type:'er'},
+};
+
+// ══════════════════════════════════════════════════════════
+// CONJUGATION ENGINE
+// ══════════════════════════════════════════════════════════
+const AH={p:['ai','as','a','avons','avez','ont'],i:['avais','avais','avait','avions','aviez','avaient'],c:['aurais','aurais','aurait','aurions','auriez','auraient'],s:['aie','aies','ait','ayons','ayez','aient']};
+const ET={p:['suis','es','est','sommes','êtes','sont'],i:['étais','étais','était','étions','étiez','étaient'],c:['serais','serais','serait','serions','seriez','seraient'],s:['sois','sois','soit','soyons','soyez','soient']};
+
+function mkComp(aux,pp){return aux.map(a=>a+' '+pp);}
+
+function genBase(inf,type){
+  let pres,pp,fut;
+  if(type==='er'){
+    const s=inf.slice(0,-2);
+    pres=[s+'e',s+'es',s+'e',s+'ons',s+'ez',s+'ent']; pp=s+'é'; fut=inf;
+  } else if(type==='er_ger'){
+    const s=inf.slice(0,-2);
+    pres=[s+'e',s+'es',s+'e',s+'eons',s+'ez',s+'ent']; pp=s+'é'; fut=inf;
+  } else if(type==='er_cer'){
+    const s=inf.slice(0,-2); const ç=s.slice(0,-1)+'ç';
+    pres=[s+'e',s+'es',s+'e',ç+'ons',s+'ez',s+'ent']; pp=s+'é'; fut=inf;
+  } else if(type==='er_eler'){
+    const s=inf.slice(0,-2); const dd=s+s.slice(-1);
+    pres=[dd+'e',dd+'es',dd+'e',s+'ons',s+'ez',dd+'ent']; pp=s+'é'; fut=dd+'er';
+  } else if(type==='er_eter'){
+    const s=inf.slice(0,-2); const dd=s+s.slice(-1);
+    pres=[dd+'e',dd+'es',dd+'e',s+'ons',s+'ez',dd+'ent']; pp=s+'é'; fut=dd+'er';
+  } else if(type==='er_è'){
+    const s=inf.slice(0,-2); const è=s.replace(/e([^e]*)$/,'è$1');
+    pres=[è+'e',è+'es',è+'e',s+'ons',s+'ez',è+'ent']; pp=s+'é'; fut=è+'er';
+  } else if(type==='er_é'){
+    const s=inf.slice(0,-2); const è=s.replace(/é([^é]*)$/,'è$1');
+    pres=[è+'e',è+'es',è+'e',s+'ons',s+'ez',è+'ent']; pp=s+'é'; fut=inf;
+  } else if(type==='er_é_ger'){
+    const s=inf.slice(0,-2); const è=s.replace(/é([^é]*)$/,'è$1');
+    pres=[è+'e',è+'es',è+'e',s+'eons',s+'ez',è+'ent']; pp=s+'é'; fut=inf;
+  } else if(type==='er_yer'){
+    const s=inf.slice(0,-2); const i=s.slice(0,-1)+'i';
+    pres=[i+'e',i+'es',i+'e',s+'ons',s+'ez',i+'ent']; pp=s+'é'; fut=i+'er';
+  } else if(type==='ir'){
+    const s=inf.slice(0,-2);
+    pres=[s+'is',s+'is',s+'it',s+'issons',s+'issez',s+'issent']; pp=s+'i'; fut=inf;
+  } else if(type==='ir2'){
+    const ls=inf.slice(0,-2); const ss=ls.slice(0,-1);
+    pres=[ss+'s',ss+'s',ss+'t',ls+'ons',ls+'ez',ls+'ent']; pp=ls+'i'; fut=inf;
+  } else if(type==='re'){
+    const s=inf.slice(0,-2);
+    pres=[s+'s',s+'s',s,s+'ons',s+'ez',s+'ent']; pp=s+'u'; fut=inf.slice(0,-1);
+  }
+  return {pres,pp,fut};
+}
+
+function transformForm(form,strip,add){
+  if(form.startsWith(strip)) return add+form.slice(strip.length);
+  const parts=form.split(' ');
+  if(parts.length>=2){
+    const pp=parts[parts.length-1];
+    if(pp.startsWith(strip)) parts[parts.length-1]=add+pp.slice(strip.length);
+    return parts.join(' ');
+  }
+  return form;
+}
+
+function conjTense(verb,tense){
+  const vd=VD[verb]||{type:'er'};
+  if(vd.derivedFrom){
+    const base=conjTense(vd.derivedFrom,tense);
+    return base.map(f=>transformForm(f,vd.stripPrefix,vd.addPrefix));
+  }
+  const b=vd.type ? {...genBase(verb,vd.type),aux:vd.aux||'avoir'} : {...vd,aux:vd.aux||'avoir'};
+  const aux=b.aux==='être'?ET:AH;
+  const imp=b.imparfaitStem||(b.pres[3].slice(0,-3));
+  const subj=b.subj||(()=>{const s=b.pres[5].slice(0,-3);return[s+'e',s+'es',s+'e',s+'ions',s+'iez',s+'ent'];})();
+  switch(tense){
+    case 'présent': return b.pres;
+    case 'imparfait': return[imp+'ais',imp+'ais',imp+'ait',imp+'ions',imp+'iez',imp+'aient'];
+    case 'passé composé': return mkComp(aux.p,b.pp);
+    case 'futur simple': return[b.fut+'ai',b.fut+'as',b.fut+'a',b.fut+'ons',b.fut+'ez',b.fut+'ont'];
+    case 'conditionnel présent': return[b.fut+'ais',b.fut+'ais',b.fut+'ait',b.fut+'ions',b.fut+'iez',b.fut+'aient'];
+    case 'subjonctif présent': return subj;
+    case 'plus-que-parfait': return mkComp(aux.i,b.pp);
+    case 'conditionnel passé': return mkComp(aux.c,b.pp);
+    case 'subjonctif passé': return mkComp(aux.s,b.pp);
+  }
+}
+
+function getForm(verb,tense,pi){return conjTense(verb,tense)[pi];}
+
+// ══════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════
+function freshProgress(){
+  const p={};
+  TENSES.forEach((t,i)=>{p[t.id]={unlocked:i===0,bestScore:0,sessions:0};});
+  return p;
+}
+let STATE={weekIndex:0,tenseProgress:freshProgress(),lastFridayAdvance:null};
+
+function loadState(){
+  try{
+    const s=localStorage.getItem('cmv2');
+    if(s){STATE=JSON.parse(s); if(!STATE.tenseProgress) STATE.tenseProgress=freshProgress();}
+  }catch(e){}
+}
+function saveState(){try{localStorage.setItem('cmv2',JSON.stringify(STATE));}catch(e){}}
+
+function currentVerbs(){return WEEK_GROUPS[STATE.weekIndex];}
+function allTensesMastered(){return TENSES.every(t=>(STATE.tenseProgress[t.id]?.bestScore||0)>=90);}
+
+function tryFridayAdvance(){
+  const now=new Date();
+  const isFri=now.getDay()===5;
+  const today=now.toDateString();
+  if(!isFri) return 'not_friday';
+  if(STATE.lastFridayAdvance===today) return 'already_checked';
+  if(!allTensesMastered()) return 'incomplete';
+  if(STATE.weekIndex>=29) return 'complete_all';
+  STATE.weekIndex++;
+  STATE.tenseProgress=freshProgress();
+  STATE.lastFridayAdvance=today;
+  saveState();
+  return 'advanced';
+}
+
+// ══════════════════════════════════════════════════════════
+// DRILL SESSION
+// ══════════════════════════════════════════════════════════
+let S={};
+const Q_COUNT=20;
+const TIMER_MS=10000;
+
+function startDrill(tenseId){
+  const verbs=currentVerbs();
+  const qs=[];
+  while(qs.length<Q_COUNT){
+    const v=verbs[Math.floor(Math.random()*verbs.length)];
+    const pi=Math.floor(Math.random()*6);
+    const ans=getForm(v,tenseId,pi);
+    if(!ans) continue;
+    const last=qs[qs.length-1];
+    if(last&&last.verb===v&&last.pi===pi) continue;
+    qs.push({verb:v,tense:tenseId,pi,ans});
+  }
+  S={tenseId,questions:qs,cur:0,correct:0,errors:[],sessionStart:Date.now(),qStart:null,timer:null,revealed:false};
+  show('drill');
+  renderDrillQ();
+}
+
+function renderDrillQ(){
+  clearInterval(S.timer);
+  S.revealed=false;
+  const q=S.questions[S.cur];
+  const tLabel=TENSES.find(t=>t.id===q.tense).label;
+  const isSubj=q.tense.includes('subjonctif');
+  const pronDisplay=isSubj?('que '+PRONOUNS[q.pi]):PRONOUNS[q.pi];
+
+  document.getElementById('drill-pill').textContent=tLabel;
+  document.getElementById('drill-count').textContent=`${S.cur+1} / ${Q_COUNT}`;
+  document.getElementById('drill-prog').style.width=`${(S.cur/Q_COUNT)*100}%`;
+  document.getElementById('drill-score').innerHTML=S.cur>0?`Correct : <b>${S.correct}</b> / ${S.cur}`:'';
+  document.getElementById('prompt-verb').textContent=q.verb;
+  document.getElementById('prompt-pron').textContent=pronDisplay;
+
+  const inp=document.getElementById('ans-input');
+  inp.value=''; inp.className='ans-input'; inp.disabled=false;
+  document.getElementById('submit-btn').disabled=false;
+  document.getElementById('feedback').textContent='';
+  document.getElementById('feedback').style.color='';
+  document.getElementById('hint-btn').style.display='inline';
+  inp.focus();
+
+  const bar=document.getElementById('timer-bar');
+  bar.style.width='100%'; bar.className='timer-bar';
+  S.qStart=Date.now();
+  S.timer=setInterval(()=>{
+    const rem=Math.max(0,1-(Date.now()-S.qStart)/TIMER_MS);
+    bar.style.width=`${rem*100}%`;
+    if(rem<0.4) bar.classList.add('slow');
+    if(rem<0.2) bar.classList.add('urgent');
+    if(rem<=0) clearInterval(S.timer);
+  },80);
+}
+
+function norm(s){return s.trim().toLowerCase().replace(/\s+/g,' ');}
+
+function submit(){
+  if(S.revealed){advance();return;}
+  const v=norm(document.getElementById('ans-input').value);
+  if(!v) return;
+  revealAns(v);
+}
+
+function showHint(){
+  const q=S.questions[S.cur];
+  const hint=q.ans.substring(0,Math.ceil(q.ans.length*0.45))+'…';
+  document.getElementById('hint-btn').style.display='none';
+  document.getElementById('feedback').innerHTML=`<span style="color:var(--cream-dim);font-style:italic">Indice : ${hint}</span>`;
+}
+
+function revealAns(userAns){
+  clearInterval(S.timer);
+  S.revealed=true;
+  const q=S.questions[S.cur];
+  const isOk=userAns===norm(q.ans);
+  const elapsed=Date.now()-S.qStart;
+
+  let bl,bc;
+  if(elapsed<2000){bl='⚡ Automatique';bc='b-auto';}
+  else if(elapsed<5000){bl='✓ Bon';bc='b-good';}
+  else{bl='⏱ Lent';bc='b-slow';}
+
+  const inp=document.getElementById('ans-input');
+  const fb=document.getElementById('feedback');
+  document.getElementById('hint-btn').style.display='none';
+  document.getElementById('submit-btn').disabled=true;
+
+  if(isOk){
+    S.correct++;
+    inp.className='ans-input correct';
+    fb.style.color='var(--green)';
+    fb.innerHTML=`Correct ! <span class="badge ${bc}">${bl}</span>`;
+  } else {
+    inp.className='ans-input wrong'; inp.value=q.ans;
+    fb.style.color='var(--red)';
+    const wp=userAns?`<span class="err-wrong">${userAns}</span>`:'';
+    fb.innerHTML=`${wp}<span style="color:var(--green)">${q.ans}</span> <span class="badge ${bc}">${bl}</span>`;
+    S.errors.push({prompt:`${q.verb} (${PRONOUNS[q.pi]})`,correct:q.ans,yours:userAns||'—'});
+  }
+  inp.disabled=true;
+  setTimeout(()=>{if(S.revealed)advance();},1800);
+}
+
+function advance(){
+  S.cur++;
+  if(S.cur>=Q_COUNT) finishDrill();
+  else renderDrillQ();
+}
+
+function finishDrill(){
+  const total=Q_COUNT;
+  const score=Math.round(S.correct/total*100);
+  const prog=STATE.tenseProgress[S.tenseId];
+  prog.sessions++;
+  let unlocked=null;
+  if(score>=90){
+    if(score>prog.bestScore) prog.bestScore=score;
+    const ti=TENSES.findIndex(t=>t.id===S.tenseId);
+    if(ti<TENSES.length-1&&!STATE.tenseProgress[TENSES[ti+1].id].unlocked){
+      STATE.tenseProgress[TENSES[ti+1].id].unlocked=true;
+      unlocked=TENSES[ti+1].label;
+    }
+  } else {
+    if(score>prog.bestScore) prog.bestScore=score;
+  }
+  saveState();
+  showResults(score,unlocked);
+}
+
+// ══════════════════════════════════════════════════════════
+// RESULTS
+// ══════════════════════════════════════════════════════════
+function showResults(score,unlockedTense){
+  const total=Q_COUNT;
+  const totalSec=(Date.now()-S.sessionStart)/1000;
+  const avg=(totalSec/total).toFixed(1);
+  const tLabel=TENSES.find(t=>t.id===S.tenseId).label;
+
+  let grade,gc;
+  if(score>=95){grade='Parfait';gc='var(--green)';}
+  else if(score>=90){grade='Excellent';gc='var(--green)';}
+  else if(score>=75){grade='Bien';gc='var(--gold)';}
+  else if(score>=60){grade='Passable';gc='var(--orange)';}
+  else{grade='À retravailler';gc='var(--red)';}
+
+  const unlockHTML=unlockedTense?`<div class="unlock-banner">✦ Débloqué : <strong>${unlockedTense}</strong></div>`:'';
+
+  const errHTML=S.errors.length>0
+    ?`<div class="err-box"><h3>Erreurs</h3>${S.errors.map(e=>`
+      <div class="err-item">
+        <span class="err-prompt">${e.prompt}</span>
+        <span><span class="err-wrong">${e.yours!=='—'?e.yours:''}</span><span class="err-correct">${e.correct}</span></span>
+      </div>`).join('')}</div>`
+    :`<div class="err-box"><div class="no-err">Aucune erreur — session parfaite !</div></div>`;
+
+  document.getElementById('res-wrap').innerHTML=`
+    <div class="res-grade" style="color:${gc}">${grade}</div>
+    <div class="res-sub">${tLabel} · Semaine ${STATE.weekIndex+1}</div>
+    <div class="res-stats">
+      <div class="res-stat"><div class="res-val">${score}%</div><div class="res-lbl">Précision</div></div>
+      <div class="res-stat"><div class="res-val">${S.correct}/${total}</div><div class="res-lbl">Correct</div></div>
+      <div class="res-stat"><div class="res-val">${avg}s</div><div class="res-lbl">Temps moy.</div></div>
+    </div>
+    ${unlockHTML}
+    ${errHTML}
+    <div class="btn-row">
+      <button class="btn-p" onclick="startDrill('${S.tenseId}')">Recommencer</button>
+      <button class="btn-s" onclick="goHome()">Tableau de bord</button>
+    </div>`;
+  show('results');
+}
+
+// ══════════════════════════════════════════════════════════
+// HOME RENDER
+// ══════════════════════════════════════════════════════════
+function renderHome(){
+  const wi=STATE.weekIndex;
+  const verbs=currentVerbs();
+  const prog=STATE.tenseProgress;
+  const mastered=TENSES.filter(t=>prog[t.id].bestScore>=90).length;
+  const now=new Date();
+  const isFri=now.getDay()===5;
+  const daysUntilFri=((5-now.getDay()+7)%7)||7;
+  const allDone=allTensesMastered();
+
+  // Week bar
+  document.getElementById('home-week-title').textContent=`Semaine ${wi+1} / 30`;
+  document.getElementById('home-week-sub').textContent=
+    wi<29?`${mastered}/9 temps maîtrisés · Avancement le vendredi`:'Programme complété !';
+
+  const fb=document.getElementById('friday-badge');
+  if(isFri&&allDone){fb.className='friday-badge today';fb.innerHTML='C\'est vendredi !<br>Prêt à avancer ✓';}
+  else if(isFri){fb.className='friday-badge today';fb.innerHTML='C\'est vendredi<br>Terminez d\'abord';}
+  else if(allDone){fb.className='friday-badge ready';fb.innerHTML=`Prêt ✓<br>Vendredi dans ${daysUntilFri}j`;}
+  else{fb.className='friday-badge wait';fb.innerHTML=`Vendredi<br>dans ${daysUntilFri} jour${daysUntilFri>1?'s':''}`;}
+
+  // Verb chips
+  document.getElementById('verb-chips').innerHTML=
+    verbs.map(v=>`<span class="verb-chip">${v}</span>`).join('');
+
+  // Progress summary
+  const totalSessions=TENSES.reduce((a,t)=>a+(prog[t.id]?.sessions||0),0);
+  document.getElementById('prog-summary').innerHTML=`
+    <div class="prog-stat"><div class="val">${mastered}/9</div><div class="lbl">Temps maîtrisés</div></div>
+    <div class="prog-stat"><div class="val">${wi+1}/30</div><div class="lbl">Semaine</div></div>
+    <div class="prog-stat"><div class="val">${totalSessions}</div><div class="lbl">Sessions</div></div>`;
+
+  // Advance area
+  const adv=document.getElementById('advance-area');
+  if(isFri&&allDone&&wi<29){
+    adv.innerHTML=`<button class="advance-btn" onclick="handleAdvance()">🎉 Avancer à la semaine ${wi+2}</button>`;
+  } else adv.innerHTML='';
+
+  // Tense grid
+  document.getElementById('tense-grid').innerHTML=TENSES.map(t=>{
+    const p=prog[t.id]||{unlocked:false,bestScore:0};
+    const score=p.bestScore||0;
+    const isLocked=!p.unlocked;
+    const isMastered=score>=90;
+    return `<div class="t-card ${isLocked?'locked':''} ${isMastered?'mastered':''}" ${!isLocked?`onclick="startDrill('${t.id}')"`:''}">
+      ${isLocked?'<span class="lock-icon">🔒</span>':''}
+      <div class="t-name">${t.label}</div>
+      <div class="t-score">${p.sessions>0?score+'%':isLocked?'Verrouillé':'Non pratiqué'}</div>
+      <div class="t-bar"><div class="t-fill ${isMastered?'green':''}" style="width:${score}%"></div></div>
+    </div>`;
+  }).join('');
+  renderNotifBanner();
+  updateNotifToggle();
+}
+
+function handleAdvance(){
+  const result=tryFridayAdvance();
+  if(result==='advanced'){
+    alert(`Félicitations ! Vous passez à la Semaine ${STATE.weekIndex+1}.`);
+    renderHome();
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// NOTIFICATION SYSTEM
+// ══════════════════════════════════════════════════════════
+function getIncompleteTenses(){
+  return TENSES.filter(t=>{
+    const p=STATE.tenseProgress[t.id];
+    return p && p.unlocked && (p.bestScore||0)<90;
+  });
+}
+
+function saveReminderTime(val){
+  STATE.reminderTime=val;
+  saveState();
+}
+
+function toggleNotifications(){
+  if(Notification.permission==='denied'){
+    alert('Les notifications sont bloquées dans votre navigateur. Veuillez les autoriser dans les paramètres.');
+    return;
+  }
+  if(!STATE.notifEnabled){
+    Notification.requestPermission().then(perm=>{
+      if(perm==='granted'){
+        STATE.notifEnabled=true;
+        saveState();
+        updateNotifToggle();
+        scheduleNotificationCheck();
+        new Notification('🇫🇷 Conjugaison Maîtresse',{
+          body:'Rappels activés ! Vous recevrez une notification à '+( STATE.reminderTime||'19:00')+' chaque jour.',
+          icon:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><text y="28" font-size="28">🇫🇷</text></svg>'
+        });
+      }
+    });
+  } else {
+    STATE.notifEnabled=false;
+    saveState();
+    updateNotifToggle();
+    if(window._notifInterval) clearInterval(window._notifInterval);
+  }
+}
+
+function updateNotifToggle(){
+  const btn=document.getElementById('notif-toggle-btn');
+  const timeInput=document.getElementById('reminder-time');
+  if(!btn) return;
+  if(STATE.notifEnabled&&Notification.permission==='granted'){
+    btn.textContent='Activé ✓';
+    btn.classList.add('on');
+  } else {
+    btn.textContent='Activer';
+    btn.classList.remove('on');
+  }
+  if(STATE.reminderTime) timeInput.value=STATE.reminderTime;
+}
+
+function scheduleNotificationCheck(){
+  if(window._notifInterval) clearInterval(window._notifInterval);
+  window._notifInterval=setInterval(()=>{
+    if(!STATE.notifEnabled||Notification.permission!=='granted') return;
+    const now=new Date();
+    const hhmm=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+    const target=STATE.reminderTime||'19:00';
+    const todayStr=now.toDateString();
+    if(hhmm===target&&STATE.lastNotifDate!==todayStr){
+      STATE.lastNotifDate=todayStr;
+      saveState();
+      fireReminderNotification();
+    }
+  },30000); // check every 30 seconds
+}
+
+function fireReminderNotification(){
+  const incomplete=getIncompleteTenses();
+  if(incomplete.length===0){
+    new Notification('🇫🇷 Conjugaison — Tous les temps maîtrisés !',{
+      body:'Félicitations ! Tous les temps sont à 90%+. Revenez vendredi pour avancer à la prochaine semaine.',
+      icon:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><text y="28" font-size="28">✅</text></svg>'
+    });
+    return;
+  }
+  const targets=incomplete.slice(0,2).map(t=>t.label).join(' · ');
+  const remaining=incomplete.length;
+  new Notification('🇫🇷 Conjugaison — Pratique du jour',{
+    body:`Pratiquez aujourd'hui : ${targets}\n${remaining} temps restant${remaining>1?'s':''} sous 90%.`,
+    icon:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><text y="28" font-size="28">🇫🇷</text></svg>'
+  });
+}
+
+function renderNotifBanner(){
+  const area=document.getElementById('notif-banner-area');
+  if(!area) return;
+  const incomplete=getIncompleteTenses();
+  const now=new Date();
+  const todayStr=now.toDateString();
+  // Show daily banner if not yet dismissed today
+  if(STATE.bannerDismissed===todayStr){area.innerHTML='';return;}
+  if(incomplete.length===0){
+    area.innerHTML=`<div class="notif-banner green">
+      <div class="notif-icon">✅</div>
+      <div class="notif-body">
+        <div class="notif-title">Tous les temps maîtrisés</div>
+        <div class="notif-text">Excellent travail ! Revenez vendredi pour avancer à la semaine suivante.</div>
+      </div>
+      <button onclick="dismissBanner()" style="background:none;border:none;cursor:pointer;color:var(--cream-dim);font-size:1rem;padding:0 0 0 8px">×</button>
+    </div>`;
+  } else {
+    const top2=incomplete.slice(0,2);
+    const pillsHTML=top2.map(t=>`<span class="notif-tense-pill">${t.label}</span>`).join('');
+    area.innerHTML=`<div class="notif-banner">
+      <div class="notif-icon">📚</div>
+      <div class="notif-body">
+        <div class="notif-title">Pratiquez aujourd'hui</div>
+        <div class="notif-text">${incomplete.length} temps sous 90% — objectif : compléter ces 2 aujourd'hui :</div>
+        <div class="notif-tenses">${pillsHTML}</div>
+      </div>
+      <button onclick="dismissBanner()" style="background:none;border:none;cursor:pointer;color:var(--cream-dim);font-size:1rem;padding:0 0 0 8px">×</button>
+    </div>`;
+  }
+}
+
+function dismissBanner(){
+  STATE.bannerDismissed=new Date().toDateString();
+  saveState();
+  document.getElementById('notif-banner-area').innerHTML='';
+}
+
+// ══════════════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════════════
+function show(id){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById('screen-'+id).classList.add('active');}
+function goHome(){clearInterval(S.timer||0);renderHome();show('home');}
+
+document.getElementById('ans-input').addEventListener('keydown',e=>{if(e.key==='Enter')submit();});
+
+// ══════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════
+loadState();
+renderHome();
+if(STATE.notifEnabled&&Notification.permission==='granted') scheduleNotificationCheck();
+</script>
+</body>
+</html>
