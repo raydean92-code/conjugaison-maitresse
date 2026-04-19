@@ -1070,25 +1070,34 @@ async function loadFromFirestore(){
   setSyncStatus('syncing','Chargement…');
   try{
     const doc=await db.collection('users').doc(currentUser.uid).collection('progress').doc('state').get();
+    // Get local state for comparison
+    let localState=null;
+    try{
+      const s=localStorage.getItem('cmv2');
+      if(s) localState=JSON.parse(s);
+    }catch(e){}
+
     if(doc.exists){
-      const data=doc.data();
-      if(data&&data.tenseProgress){
-        STATE=data;
-        try{localStorage.setItem('cmv2',JSON.stringify(STATE));}catch(e){}
+      const remote=doc.data();
+      if(remote&&remote.tenseProgress){
+        const remoteTs=remote.savedAt||0;
+        const localTs=(localState&&localState.savedAt)||0;
+        if(remoteTs>=localTs){
+          // Remote is newer or equal — use it
+          STATE=remote;
+          try{localStorage.setItem('cmv2',JSON.stringify(STATE));}catch(e){}
+        } else {
+          // Local is newer — keep local and push it up to Firestore
+          STATE=localState;
+          db.collection('users').doc(currentUser.uid).collection('progress').doc('state').set(STATE).catch(()=>{});
+        }
       }
     } else {
-      // Nothing in Firestore yet — restore from localStorage and push it up
-      try{
-        const s=localStorage.getItem('cmv2');
-        if(s){
-          const parsed=JSON.parse(s);
-          if(parsed&&parsed.tenseProgress){
-            STATE=parsed;
-            // Upload local progress to Firestore so other devices can see it
-            db.collection('users').doc(currentUser.uid).collection('progress').doc('state').set(STATE).catch(()=>{});
-          }
-        }
-      }catch(e){}
+      // Nothing in Firestore yet — push local up
+      if(localState&&localState.tenseProgress){
+        STATE=localState;
+        db.collection('users').doc(currentUser.uid).collection('progress').doc('state').set(STATE).catch(()=>{});
+      }
     }
     setSyncStatus('synced','Synchronisé ✓');
   }catch(e){
@@ -1100,6 +1109,8 @@ async function loadFromFirestore(){
 }
 
 function saveState(){
+  // Stamp with current timestamp so devices can compare recency
+  STATE.savedAt=Date.now();
   // Immediate local save
   try{localStorage.setItem('cmv2',JSON.stringify(STATE));}catch(e){}
   // Debounced Firestore save
