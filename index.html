@@ -1034,10 +1034,14 @@ function signInWithGoogle(){
 
 function signOut(){
   if(!auth) return;
+  clearTimeout(saveDebounce);
+  if(db&&currentUser){
+    db.collection('users').doc(currentUser.uid).collection('progress').doc('state').set(STATE).catch(()=>{});
+  }
   auth.signOut().then(()=>{
     currentUser=null;
-    STATE={weekIndex:0,tenseProgress:freshProgress(),lastFridayAdvance:null};
     document.getElementById('auth-overlay').style.display='flex';
+    document.getElementById('user-bar').style.display='none';
   });
 }
 
@@ -1072,6 +1076,19 @@ async function loadFromFirestore(){
         STATE=data;
         try{localStorage.setItem('cmv2',JSON.stringify(STATE));}catch(e){}
       }
+    } else {
+      // Nothing in Firestore yet — restore from localStorage and push it up
+      try{
+        const s=localStorage.getItem('cmv2');
+        if(s){
+          const parsed=JSON.parse(s);
+          if(parsed&&parsed.tenseProgress){
+            STATE=parsed;
+            // Upload local progress to Firestore so other devices can see it
+            db.collection('users').doc(currentUser.uid).collection('progress').doc('state').set(STATE).catch(()=>{});
+          }
+        }
+      }catch(e){}
     }
     setSyncStatus('synced','Synchronisé ✓');
   }catch(e){
